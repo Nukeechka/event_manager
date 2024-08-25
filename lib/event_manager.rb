@@ -8,6 +8,30 @@ def clean_zipcode(zipcode)
   zipcode.to_s.rjust(5, '0')[0..4]
 end
 
+def week_day(day)
+  days = %w[Sunday Monday Tuesday Wednesday Thursday Friday Saturday]
+  days[day % 7]
+end
+
+def get_day(reg_date)
+  reg_date = reg_date.split(' ')
+  temp_date = "20#{reg_date[0]}"
+  date = Date.strptime(temp_date, '%Y/%d/%m').to_s
+  time = reg_date[1].to_s
+  temp_time = date.concat(32, time)
+  week_day(Time.parse(temp_time).wday)
+end
+
+def peak_wday(days)
+  results = days.reduce(Hash.new(0)) do |result, day| # rubocop:disable Style/EachWithObject
+    result[day] += 1
+    result
+  end
+  results.each_pair do |key, value|
+    puts "Day of the week #{key}: amount registrations #{value}"
+  end
+end
+
 def get_hour(reg_date)
   reg_date = reg_date.split(' ')
   temp_date = "20#{reg_date[0]}"
@@ -74,9 +98,10 @@ contents = CSV.open(
   header_converters: :symbol
 )
 
-# template_letter = File.read('../form_letter.erb')
-# erb_template = ERB.new template_letter
+template_letter = File.read('../form_letter.erb')
+erb_template = ERB.new template_letter
 hours = []
+days = []
 
 contents.each do |row|
   id = row[0]
@@ -85,14 +110,18 @@ contents.each do |row|
   zipcode = clean_zipcode(row[:zipcode])
   hour = get_hour(row[:regdate])
   hours.push(hour)
+  day = get_day(row[:regdate])
+  days.push(day)
 
-  # legislators = legislators_by_zipcode(zipcode)
+  legislators = legislators_by_zipcode(zipcode)
 
-  # form_letter = erb_template.result(binding)
+  form_letter = erb_template.result(binding)
 
-  # save_thank_you_letter(id, form_letter)
+  save_thank_you_letter(id, form_letter)
 
   puts "#{id} #{name} #{zipcode} #{phone}"
 end
 puts
 peak_hour(hours)
+puts
+peak_wday(days)
